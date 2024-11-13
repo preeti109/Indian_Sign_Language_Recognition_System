@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Recognition</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Fullscreen style for the body */
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #000;
+        }
+
+        /* Webcam feed style */
+        #video {
+            width: 50%;
+            /* Half screen width */
+            height: 100%;
+            object-fit: cover;
+            border-right: 2px solid #fff;
+        }
+
+        /* Container for prediction result */
+        #prediction-container {
+            width: 50%;
+            /* Half screen width */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        /* Prediction text styling */
+        #prediction {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00FF00;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Extra styling for header */
+        h1 {
+            position: absolute;
+            top: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            color: #00FF00;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Hide the "Press q to exit" message initially */
+        #exit-message {
+            display: none;
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #FF0000;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Sign Language Recognition</h1>
+    <!-- Split screen: Video on left side, prediction on right -->
+    <video id="video" autoplay></video>
+    <div id="prediction-container">
+        <div id="prediction">Prediction: Waiting...</div>
+    </div>
+    <div id="exit-message">Press 'q' to exit</div>
+
+    <script>
+        const video = document.getElementById('video');
+        const predictionDiv = document.getElementById('prediction');
+        const exitMessage = document.getElementById('exit-message');
+
+        // Access webcam and stream video to <video> element
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((error) => {
+                console.error("Error accessing webcam: ", error);
+            });
+
+        // Capture frames and send them for prediction
+        function captureFrame() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                // Send captured image to the backend for prediction
+                const formData = new FormData();
+                formData.append("image", blob);
+
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        predictionDiv.textContent = `Prediction: ${data.prediction}`;
+                    })
+                    .catch(error => console.error('Error during prediction:', error));
+            }, 'image/jpeg');
+        }
+
+        // Run the frame capture every 1 second
+        setInterval(captureFrame, 1000);
+
+        // Handle the exit message on pressing 'q'
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'q' || event.key === 'Q') {
+                exitMessage.style.display = 'block';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+
+</html>
